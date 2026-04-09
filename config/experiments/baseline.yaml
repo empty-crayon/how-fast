@@ -1,0 +1,14 @@
+name: baseline
+description: "vLLM defaults — no special optimizations"
+gpu_type: A10G
+
+vllm:
+  model: "unsloth/Phi-3-mini-4k-instruct"
+  revision: main
+  dtype: float16
+  max_model_len: 4096
+  max_num_seqs: 32
+  gpu_memory_utilization: 0.90
+  enforce_eager: true
+  enable_chunked_prefill: false
+  enable_prefix_caching: false

@@ -1,0 +1,24 @@
+# how-fast benchmark configuration
+
+gateway:
+  lb_url: "http://localhost:8780"          # nginx load balancer
+
+gpu:
+  gpu_type: "A10G"
+  hourly_cost_usd: 1.10                   # Lambda A10 pricing
+
+# vLLM + GPU monitor on remote GPU server, accessed via SSH tunnel:
+#   ssh -L 8000:localhost:8000 -L 8081:localhost:8081 user@gpu-server
+server_url: "http://localhost:8000"        # vLLM server (tunneled)
+gpu_monitor_url: "http://localhost:8081"   # gpu_monitor.py (tunneled)
+
+warmup:
+  health_check_timeout_s: 120
+  warmup_requests: 10
+  warmup_duration_s: 120                   # 2 minutes minimum
+  warmup_max_tokens: 32
+
+n_runs: 1                                # requests per workload row
+temperature: 0.0
+timeout_per_request_s: 120
+stream: true
