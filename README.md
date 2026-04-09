@@ -6,6 +6,14 @@ Built to answer a specific question: when you're comparing vLLM configurations o
 
 ---
 
+## Demo
+
+Running a `prefix_caching` experiment against `unsloth/Phi-3-mini-4k-instruct` on a Lambda A10G.
+
+![demo](docs/demo.jpeg)
+
+---
+
 ## Architecture
 
 ![System Architecture](docs/how-fast%20sys%20arch.png)
