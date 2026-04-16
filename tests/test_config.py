@@ -12,39 +12,38 @@ def test_load_bench_config():
     cfg = load_bench_config(CONFIG_DIR / "bench.yaml")
     assert cfg.gateway.lb_url == "http://localhost:8780"
     assert cfg.gpu.gpu_type == "A10G"
-    assert cfg.n_runs == 1
+    assert cfg.load_profile.type == "concurrency"
+    assert cfg.load_profile.concurrent_requests == 32
+    assert cfg.load_profile.duration_s == 120
     assert cfg.warmup.warmup_requests == 10
 
 
 def test_load_experiments():
     exps = load_experiments(CONFIG_DIR / "experiments")
     names = {e.name for e in exps}
-    assert "baseline" in names
+    assert "Baseline" in names
 
-    baseline = next(e for e in exps if e.name == "baseline")
-    assert baseline.vllm.enforce_eager is True
-    assert baseline.vllm.enable_chunked_prefill is False
+    baseline = next(e for e in exps if e.name == "Baseline")
+    assert baseline.vllm.model == "Qwen/Qwen3.5-4B"
+    assert baseline.vllm.max_model_len == 8192
 
 
 def test_load_experiments_filter():
-    exps = load_experiments(CONFIG_DIR / "experiments", names=["baseline"])
+    exps = load_experiments(CONFIG_DIR / "experiments", names=["Baseline"])
     assert len(exps) == 1
-    assert exps[0].name == "baseline"
+    assert exps[0].name == "Baseline"
 
 
 def test_load_slo_config():
     slo = load_slo_config(CONFIG_DIR.parent / "config" / "slos.yaml")
-    assert "chat" in slo.workloads
-    assert slo.workloads["chat"].max_ttft_p95_s == 1.0
+    assert "mixed" in slo.workloads
+    assert slo.workloads["mixed"].max_ttft_p95_s == 3.0
 
 
 def test_load_workloads():
     wkls = load_workloads(WORKLOADS_DIR)
-    assert "chat" in wkls
-    assert "classify" in wkls
-    assert "synthesize" in wkls
-    assert len(wkls["chat"]) == 30
-    # Check fields stripped
-    row = wkls["chat"][0]
-    assert row.request_id.startswith("chat-")
+    assert "mixed" in wkls
+    assert "warmup" not in wkls  # warmup.jsonl is excluded from benchmark workloads
+    row = wkls["mixed"][0]
+    assert row.request_id.startswith("mixed-")
     assert isinstance(row.messages, list)

@@ -1,0 +1,10 @@
+{"request_id": "warmup-001", "messages": [{"role": "user", "content": "Hello! How are you?"}], "max_tokens": 32}
+{"request_id": "warmup-002", "messages": [{"role": "user", "content": "What is 2 + 2?"}], "max_tokens": 32}
+{"request_id": "warmup-003", "messages": [{"role": "user", "content": "Say hello."}], "max_tokens": 32}
+{"request_id": "warmup-004", "messages": [{"role": "user", "content": "What color is the sky?"}], "max_tokens": 32}
+{"request_id": "warmup-005", "messages": [{"role": "user", "content": "Name a fruit."}], "max_tokens": 32}
+{"request_id": "warmup-006", "messages": [{"role": "user", "content": "What is the capital of France?"}], "max_tokens": 32}
+{"request_id": "warmup-007", "messages": [{"role": "user", "content": "Count to five."}], "max_tokens": 32}
+{"request_id": "warmup-008", "messages": [{"role": "user", "content": "What is today?"}], "max_tokens": 32}
+{"request_id": "warmup-009", "messages": [{"role": "user", "content": "Summarize in one word: happy."}], "max_tokens": 32}
+{"request_id": "warmup-010", "messages": [{"role": "user", "content": "Say goodbye."}], "max_tokens": 32}
