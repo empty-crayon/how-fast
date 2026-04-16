@@ -1,8 +1,25 @@
 [project]
 name = "how-fast"
 version = "0.1.0"
-description = "Inference benchmarking library for NanoServe"
+description = "LLM inference benchmarking — latency, throughput, gateway overhead, and SLO verification for vLLM deployments"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Chinmay Deshpande", email = "iamchinmayproxy@gmail.com" },
+]
 requires-python = ">=3.11"
+keywords = ["llm", "vllm", "benchmarking", "inference", "latency", "throughput", "slo"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Benchmark",
+]
 dependencies = [
     "httpx>=0.28",
     "pyyaml>=6",
@@ -11,8 +28,12 @@ dependencies = [
     "pandas>=2",
 ]
 
+[project.urls]
+Homepage = "https://github.com/empty-crayon/how-fast"
+Repository = "https://github.com/empty-crayon/how-fast"
+Issues = "https://github.com/empty-crayon/how-fast/issues"
+
 [project.optional-dependencies]
-deploy = ["modal>=0.73"]
 notebook = ["matplotlib>=3.8", "plotly>=5.18", "jupyter>=1.0"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
