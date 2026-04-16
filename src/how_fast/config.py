@@ -66,11 +66,13 @@ def load_slo_config(path: str | Path | None = None) -> SLOConfig:
 
 
 def load_workloads(directory: str | Path | None = None) -> dict[str, list[WorkloadRow]]:
-    """Load all .jsonl files from workloads dir. Returns {name: [WorkloadRow, ...]}."""
+    """Load benchmark .jsonl files from workloads dir. Skips warmup.jsonl."""
     root = _project_root()
     d = Path(directory) if directory else root / DEFAULT_WORKLOADS_DIR
     workloads: dict[str, list[WorkloadRow]] = {}
     for f in sorted(d.glob("*.jsonl")):
+        if f.stem == "warmup":  # reserved for warmup, not a benchmark workload
+            continue
         name = f.stem  # e.g. "chat" from "chat.jsonl"
         rows: list[WorkloadRow] = []
         for line in f.read_text().splitlines():
@@ -85,6 +87,22 @@ def load_workloads(directory: str | Path | None = None) -> dict[str, list[Worklo
         raise FileNotFoundError(f"No workload .jsonl files found in {d}")
     return workloads
 
+
+
+def load_warmup_workload(directory: str | Path | None = None) -> list[WorkloadRow]:
+    """Load workloads/warmup.jsonl — small focused prompts for server warmup."""
+    root = _project_root()
+    d = Path(directory) if directory else root / DEFAULT_WORKLOADS_DIR
+    f = d / "warmup.jsonl"
+    if not f.exists():
+        raise FileNotFoundError(f"Warmup workload not found: {f}")
+    rows: list[WorkloadRow] = []
+    for line in f.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        rows.append(WorkloadRow(**json.loads(line)))
+    return rows
 
 
 def get_results_dir(path: str | Path | None = None) -> Path:

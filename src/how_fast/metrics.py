@@ -83,6 +83,7 @@ def aggregate_results(
                 mean_gpu_util_pct=round(mean_gpu_util, 1) if mean_gpu_util is not None else None,
                 cost_per_request_usd=round(cost_per_req, 6) if cost_per_req else None,
                 cost_per_token_usd=round(cost_per_tok, 8) if cost_per_tok else None,
+                throughput_rps=round(len(ok) / wall_time_s, 4) if wall_time_s and ok else None,
             )
         )
 
@@ -98,7 +99,9 @@ def check_slos(
     checks = {
         "max_ttft_p95_s": ("ttft_p95_s", "le"),
         "max_total_latency_p95_s": ("total_latency_p95_s", "le"),
+        "max_total_latency_p50_s": ("total_latency_p50_s", "le"),
         "min_tps_p50": ("tps_p50", "ge"),
+        "min_throughput_RPS": ("throughput_rps", "ge"),
         "max_error_rate": ("error_rate", "le"),
         "max_cost_per_request_usd": ("cost_per_request_usd", "le"),
     }

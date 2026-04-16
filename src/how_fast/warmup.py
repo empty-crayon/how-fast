@@ -59,6 +59,7 @@ async def warmup_server(
     # Phase 2: Warm-up requests (at least warmup_duration_s)
     start = time.monotonic()
     sent = 0
+    completed = 0
     target = warmup_config.warmup_requests
     min_duration = warmup_config.warmup_duration_s
 
@@ -76,21 +77,47 @@ async def warmup_server(
         if len(warmup_rows) >= target:
             break
 
-    while sent < target and (time.monotonic() - start) < min_duration:
+    # Dedicated ticker so timer updates smoothly while requests are in-flight
+    stop_tick = asyncio.Event()
+
+    async def _tick() -> None:
+        while not stop_tick.is_set():
+            elapsed = time.monotonic() - start
+            term.progress(
+                "warmup",
+                f"{experiment} │ warming up",
+                completed, target,
+                suffix=f"{int(elapsed)}s / {min_duration}s",
+            )
+            try:
+                await asyncio.wait_for(stop_tick.wait(), timeout=0.25)
+            except asyncio.TimeoutError:
+                pass
+
+    ticker = asyncio.create_task(_tick())
+
+    # Hard deadline: cut off even mid-request when duration expires
+    deadline = start + min_duration
+
+    while sent < target:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            term.warn("warmup", f"{experiment} │ duration limit ({min_duration}s) reached")
+            break
+
         row = warmup_rows[sent % len(warmup_rows)]
-        await client.send_request(row, experiment, "warmup", via="gateway")
+        try:
+            await asyncio.wait_for(
+                client.send_request(row, experiment, "warmup", via="gateway"),
+                timeout=remaining,
+            )
+            completed += 1
+        except asyncio.TimeoutError:
+            term.warn("warmup", f"{experiment} │ duration limit ({min_duration}s) reached mid-request")
+            break
         sent += 1
-        elapsed = time.monotonic() - start
-        term.progress(
-            "warmup",
-            f"{experiment} │ warming up",
-            sent, target,
-            suffix=f"{int(elapsed)}s / {min_duration}s",
-        )
 
-        # Pace requests if we've sent target but haven't reached min duration
-        if sent >= target and elapsed < min_duration:
-            await asyncio.sleep(2)
-
+    stop_tick.set()
+    await ticker
     t1 = time.monotonic() - start
     term.progress_done("warmup", f"{experiment} │ warming up", t1)

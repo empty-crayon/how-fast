@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Annotated, Literal, Union
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ── Config Models ──
@@ -26,25 +28,63 @@ class WarmupConfig(BaseModel):
     warmup_max_tokens: int = 32
 
 
+# ── Load Profile Models ──
+
+
+class ConcurrencyProfile(BaseModel):
+    """Closed-loop: N workers pull from a queue for duration_s seconds."""
+
+    type: Literal["concurrency"] = "concurrency"
+    concurrent_requests: int  # number of parallel workers
+    duration_s: int  # run for this many seconds
+
+
+class QPSProfile(BaseModel):
+    """Open-loop: fire requests at target_qps (Poisson) for duration_s seconds."""
+
+    type: Literal["qps"] = "qps"
+    target_qps: float  # average requests per second (Poisson λ)
+    duration_s: int  # run for this many seconds
+
+
+LoadProfile = Annotated[
+    Union[ConcurrencyProfile, QPSProfile],
+    Field(discriminator="type"),
+]
+
+
 class BenchConfig(BaseModel):
-    """Top-level bench.yaml schema."""
+    """Top-level bench.yaml config."""
 
     gateway: GatewayConfig
     gpu: GPUConfig
     warmup: WarmupConfig = WarmupConfig()
     server_url: str = "http://localhost:8000"  # vLLM server (via SSH tunnel)
     gpu_monitor_url: str = "http://localhost:8081"  # gpu_monitor.py (via SSH tunnel)
-    n_runs: int = 10
+    load_profile: LoadProfile
     temperature: float = 0.0
     timeout_per_request_s: int = 120
     stream: bool = True
+    exhaust_dataset: bool = False  # stop after each prompt sent once (no looping)
 
 
 # ── Experiment Models ──
 
 
 class VLLMArgs(BaseModel):
-    """vLLM server arguments. Serialized to Modal deploy command."""
+    """vLLM server arguments. Serialized to vllm serve CLI command.
+
+    Named fields cover the most common options. Any additional field in the
+    experiment YAML is captured in model_extra and emitted as a CLI flag:
+      - underscore → hyphen:  tensor_parallel_size → --tensor-parallel-size
+      - hyphenated key:       reasoning-parser     → --reasoning-parser
+      - bool True:            enforce_eager: true   → --enforce-eager
+      - bool True (no_ key):  no_enable_prefix_caching: true → --no-enable-prefix-caching
+      - bool False:           skipped
+      - string/number:        --flag value
+    """
+
+    model_config = ConfigDict(extra="allow")
 
     model: str
     revision: str = "main"
@@ -78,6 +118,10 @@ class WorkloadRow(BaseModel):
     messages: list[dict]
     max_tokens: int = 256
     temperature: float | None = None
+    top_p: float | None = None
+    top_k: int | None = None
+    chat_template_kwargs: dict | None = None
+    technique: str = ""
 
 
 # ── Result Models ──
@@ -129,6 +173,7 @@ class AggregatedMetrics(BaseModel):
     tps_mean: float
     tps_p50: float
     tps_p95: float
+    throughput_rps: float | None = None
     # GPU
     peak_vram_mb: float | None = None
     mean_vram_mb: float | None = None
@@ -146,7 +191,9 @@ class SLOThresholds(BaseModel):
 
     max_ttft_p95_s: float | None = None
     max_total_latency_p95_s: float | None = None
+    max_total_latency_p50_s: float | None = None
     min_tps_p50: float | None = None
+    min_throughput_RPS: float | None = None
     max_error_rate: float | None = None
     max_cost_per_request_usd: float | None = None
 

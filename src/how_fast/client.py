@@ -51,6 +51,14 @@ class BenchClient:
         self.model = model
         self.stream = stream
         self.timeout_s = timeout_s
+        # Persistent connection pool — reuse TCP connections across requests
+        limits = httpx.Limits(max_keepalive_connections=500, max_connections=500)
+        timeout = httpx.Timeout(self.timeout_s, connect=30.0)
+        self._http = httpx.AsyncClient(limits=limits, timeout=timeout)
+
+    async def close(self) -> None:
+        """Close the underlying connection pool. Call after benchmarking."""
+        await self._http.aclose()
 
     async def send_request(
         self,
@@ -69,6 +77,16 @@ class BenchClient:
             "temperature": row.temperature if row.temperature is not None else temperature,
             "stream": self.stream,
         }
+        if row.top_p is not None:
+            body["top_p"] = row.top_p
+        if row.top_k is not None:
+            body["top_k"] = row.top_k
+        if row.chat_template_kwargs is not None:
+            body["chat_template_kwargs"] = row.chat_template_kwargs
+
+        headers = {"Content-Type": "application/json"}
+        if row.technique:
+            headers["X-Pipeline-Stage"] = row.technique
 
         start = time.perf_counter()
         ttft_s = None
@@ -76,17 +94,14 @@ class BenchClient:
         prompt_tokens = 0
 
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(self.timeout_s, connect=30.0)
-            ) as client:
-                if self.stream:
-                    ttft_s, completion_tokens = await self._stream_request(
-                        client, url, body, start
-                    )
-                else:
-                    prompt_tokens, completion_tokens = await self._non_stream_request(
-                        client, url, body
-                    )
+            if self.stream:
+                ttft_s, completion_tokens = await self._stream_request(
+                    self._http, url, body, headers, start
+                )
+            else:
+                prompt_tokens, completion_tokens = await self._non_stream_request(
+                    self._http, url, body, headers
+                )
 
             total = time.perf_counter() - start
             tps = completion_tokens / total if total > 0 and completion_tokens > 0 else 0.0
@@ -122,6 +137,7 @@ class BenchClient:
         client: httpx.AsyncClient,
         url: str,
         body: dict,
+        headers: dict,
         start: float,
     ) -> tuple[float | None, int]:
         """Stream response, capture TTFT and token count."""
@@ -131,7 +147,7 @@ class BenchClient:
             "POST",
             url,
             json=body,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         ) as resp:
             resp.raise_for_status()
             async for line in resp.aiter_lines():
@@ -156,10 +172,11 @@ class BenchClient:
         client: httpx.AsyncClient,
         url: str,
         body: dict,
+        headers: dict,
     ) -> tuple[int, int]:
         """Non-streaming request, return (prompt_tokens, completion_tokens)."""
         resp = await client.post(
-            url, json=body, headers={"Content-Type": "application/json"}
+            url, json=body, headers=headers
         )
         resp.raise_for_status()
         data = resp.json()

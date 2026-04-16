@@ -11,16 +11,45 @@ import pandas as pd
 from .config import get_results_dir
 from .schemas import (
     AggregatedMetrics,
+    ConcurrencyProfile,
     ExperimentConfig,
     GPUSample,
+    LoadProfile,
+    QPSProfile,
     RequestResult,
 )
 
 
-def _run_dir(experiment: str, results_dir: Path | None = None) -> Path:
-    """Create timestamped run directory: results/<experiment>/<timestamp>/"""
+def _load_label(profile: LoadProfile) -> str:
+    """Return a short filesystem-safe label for a load profile.
+
+    Examples:
+        ConcurrencyProfile(concurrent_requests=8, duration_s=60)  → "conc_8_60s"
+        QPSProfile(target_qps=4.0, duration_s=120)                → "qps_4_120s"
+        QPSProfile(target_qps=0.5, duration_s=60)                 → "qps_0.5_60s"
+    """
+    if isinstance(profile, ConcurrencyProfile):
+        return f"conc_{profile.concurrent_requests}_{profile.duration_s}s"
+    elif isinstance(profile, QPSProfile):
+        # Drop ".0" suffix for whole numbers (4.0 → "4")
+        qps_str = str(int(profile.target_qps)) if profile.target_qps == int(profile.target_qps) else str(profile.target_qps)
+        return f"qps_{qps_str}_{profile.duration_s}s"
+    return "custom"
+
+
+def _run_dir(
+    experiment: str,
+    load_profile: LoadProfile | None = None,
+    results_dir: Path | None = None,
+) -> Path:
+    """Create timestamped run directory.
+
+    Path: results/<experiment>/<load_label>_<timestamp>/
+    e.g.: results/baseline/conc_8_60s_2026-04-11T10-01-51Z/
+    """
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
-    d = (results_dir or get_results_dir()) / experiment / ts
+    label = f"{_load_label(load_profile)}_{ts}" if load_profile is not None else ts
+    d = (results_dir or get_results_dir()) / experiment / label
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -33,10 +62,11 @@ def save_run(
     baseline_results: list[RequestResult] | None = None,
     slo_report: list[dict] | None = None,
     wall_time_s: float | None = None,
+    load_profile: LoadProfile | None = None,
     results_dir: Path | None = None,
 ) -> Path:
     """Save all outputs for one experiment run. Returns the run directory."""
-    run_dir = _run_dir(experiment.name, results_dir)
+    run_dir = _run_dir(experiment.name, load_profile, results_dir)
 
     # 1. requests.csv — raw request-level data
     if request_results:
