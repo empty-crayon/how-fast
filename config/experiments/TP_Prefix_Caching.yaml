@@ -1,0 +1,16 @@
+name: Prefix_Caching
+description: "Prefix caching + Chunked Prefill"
+gpu_type: A10G
+container_idle_timeout_min: 20
+
+vllm:
+  model: "Qwen/Qwen3.5-4B"
+  reasoning_parser: qwen3
+  revision: main
+  dtype: float16
+  max_model_len: 8192
+  max_num_seqs: 64
+  gpu_memory_utilization: 0.95
+  enforce_eager: false
+  enable_chunked_prefill: true
+  enable_prefix_caching: true

@@ -18,7 +18,17 @@ warmup:
   warmup_duration_s: 120                   # 2 minutes minimum
   warmup_max_tokens: 32
 
-n_runs: 1                                # requests per workload row
+load_profile:
+  type: "concurrency"
+  concurrent_requests: 32
+  duration_s: 120
+
+# load_profile:
+#   type: "qps"
+#   target_qps: 16
+#   duration_s: 60
+
 temperature: 0.0
 timeout_per_request_s: 120
 stream: true
+exhaust_dataset: true

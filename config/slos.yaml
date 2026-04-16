@@ -1,22 +1,11 @@
 # SLO definitions per workload
-
 workloads:
-  chat:
-    max_ttft_p95_s: 1.0
-    max_total_latency_p95_s: 10.0
-    min_tps_p50: 20.0
+  mixed:
+    max_ttft_p95_s: 3.0
+    max_total_latency_p95_s: 120.0
+    max_total_latency_p50_s: 15
     max_error_rate: 0.01
-    max_cost_per_request_usd: 0.005
+    min_throughput_RPS: 1
+    max_cost_per_request_usd: 0.001
 
-  classify:
-    max_ttft_p95_s: 0.5
-    max_total_latency_p95_s: 3.0
-    min_tps_p50: 30.0
-    max_error_rate: 0.005
-
-  synthesize:
-    max_ttft_p95_s: 2.0
-    max_total_latency_p95_s: 30.0
-    min_tps_p50: 15.0
-    max_error_rate: 0.02
-    max_cost_per_request_usd: 0.02
+  
